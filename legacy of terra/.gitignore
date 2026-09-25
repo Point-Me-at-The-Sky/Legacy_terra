@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+
+# Godot generated imports and local exports; keep .gd.uid files.
+/godot/.godot/
+/godot/builds/

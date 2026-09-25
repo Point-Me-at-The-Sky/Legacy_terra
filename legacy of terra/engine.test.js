@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createGame,commit,advance,legalOrder} from './engine.js';
+test('commands resolve last in first out without mutating input',()=>{const s=createGame();const running=commit(s,[{type:'harvest',at:0},{type:'build',at:0},{type:'move',at:0,to:1,count:3}]);const next=advance(running);assert.equal(next.worlds[1].owner,0);assert.equal(next.worlds[0].ships,2);assert.equal(s.worlds[0].ships,5);assert.equal(running.queues[0].length,3);});
+test('reject illegal movement and malformed stacks',()=>{const s=createGame();assert.equal(legalOrder(s,0,{type:'move',at:0,to:7,count:1}),false);assert.equal(legalOrder(s,0,{type:'move',at:0,to:1,count:-1}),false);assert.throws(()=>commit(s,[]));});
+test('full match completes and preserves nonnegative resources',()=>{let s=createGame();let steps=0;while(s.phase!=='finished'&&steps++<100){if(s.phase==='planning'){const at=s.worlds.findIndex(w=>w.owner===0);s=commit(s,Array.from({length:3},()=>({type:'harvest',at})));}else s=advance(s);assert.ok(s.worlds.every(w=>w.ships>=0));assert.ok(s.credits.every(n=>n>=0));}assert.equal(s.phase,'finished');});
+test('failed orders are consumed when earlier orders exhaust ships',()=>{let s=commit(createGame(),Array.from({length:3},()=>({type:'move',at:0,to:1,count:5})));for(let i=0;i<6;i++)s=advance(s);assert.equal(s.phase,'planning');assert.ok(s.log.some(t=>t.includes('command failed')));assert.equal(s.score[0],1);});

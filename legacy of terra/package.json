@@ -1,0 +1,14 @@
+{
+  "name": "legacy-of-terra",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "start": "python3 -m http.server 8080",
+    "docs:build": "python3 scripts/build_docs.py",
+    "docs:check": "python3 scripts/build_docs.py --check",
+    "godot:run": "python3 scripts/godot.py run",
+    "godot:editor": "python3 scripts/godot.py editor",
+    "godot:test": "python3 scripts/godot.py test"
+  }
+}

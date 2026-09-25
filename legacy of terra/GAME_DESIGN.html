@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Legacy of Terra — Game Design Document</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#0b1018;color:#d9e2e9;line-height:1.7}*{box-sizing:border-box}body{margin:0}a{color:#efb376;text-underline-offset:3px}a:focus-visible{outline:2px solid #efb376;outline-offset:4px}.top{padding:20px 5%;border-bottom:1px solid #ffffff25;display:flex;gap:24px;flex-wrap:wrap}.layout{display:grid;grid-template-columns:260px minmax(0,850px);gap:48px;max-width:1250px;margin:auto;padding:40px 24px}nav{align-self:start;position:sticky;top:24px;font-size:14px}nav ol{list-style:none;padding:0}nav li{margin:10px 0}nav a{color:#b5c5d4}h1{font-size:clamp(28px,4vw,42px);line-height:1.2;color:#efb376}h2{margin-top:48px;padding-top:16px;border-top:1px solid #ffffff25;line-height:1.3;scroll-margin-top:24px}h3{color:#b9aff1}p,li{max-width:78ch}li{margin:7px 0}table{border-collapse:collapse;width:100%;font-size:14px;display:block;overflow-x:auto}th,td{text-align:left;padding:12px;border:1px solid #ffffff25;min-width:140px;vertical-align:top}th{background:#1a2736}code{background:#1a2736;padding:2px 5px}main{min-width:0}@media(max-width:850px){.layout{grid-template-columns:1fr;gap:8px}nav{position:static}nav ol{columns:2}h2{margin-top:32px}}@media(max-width:480px){nav ol{columns:1}}@media print{:root{color-scheme:light;background:white;color:#111;font-size:10pt}.top,nav{display:none}.layout{display:block;padding:0;max-width:none}h1,h3,a{color:#111}h2{break-after:avoid}table{display:table;font-size:9pt}th,td{border-color:#aaa;min-width:0}th{background:#eee}tr{break-inside:avoid}}
+</style></head>
+<body><div class="top"><a href="index.html">← Back to game</a><a href="GAME_DESIGN.md">Markdown source</a><a href="#document">Read document</a></div>
+<div class="layout"><nav aria-label="Document contents"><strong>CONTENTS</strong><ol><li><a href="#section-1">1. Vision</a></li><li><a href="#section-2">2. Inspiration and design pillars</a></li><li><a href="#section-3">3. Setting and presentation</a></li><li><a href="#section-4">4. Implementation status</a></li><li><a href="#section-5">5. Proposed core loop</a></li><li><a href="#section-6">6. Territory, economy, and victory</a></li><li><a href="#section-7">7. Combat direction</a></li><li><a href="#section-8">8. AI design</a></li><li><a href="#section-9">9. User experience</a></li><li><a href="#section-10">10. Technical direction</a></li><li><a href="#section-11">11. Milestones and acceptance criteria</a></li><li><a href="#section-12">12. Playtesting and open decisions</a></li><li><a href="#section-13">References and implementation</a></li></ol></nav><main id="document"><h1>Legacy of Terra — Game Design Document</h1>
+<p><strong>Version:</strong> 0.17 · <strong>Date:</strong> 2026-09-18 · <strong>Status:</strong> Draft for discussion</p>
+<p>The game is titled <strong>Legacy of Terra</strong>. This document explains the vision. <a href="DECISIONS.md">DECISIONS.md</a> owns requirement status, <a href="RULES.md">RULES.md</a> specifies current gameplay, and <a href="ROADMAP.md">ROADMAP.md</a> identifies the next buildable slice. Confirmed requirements, selected experiment rules, and still-proposed alternatives are labeled separately. Test values and names remain revisable.</p>
+<h2 id="section-1">1. Vision</h2>
+<p>A turn-based strategy game set long after an incredibly advanced human precursor civilization broke the universe and introduced magic. That civilization is gone, but its legacy shapes a universe where magic and advanced technology coexist. Alien civilizations and strange remnants or offshoots of humanity compete to claim its relics. Players simultaneously place tactics tokens to define their planned actions before seeing how the round unfolds, contest critical locations, and use a small number of consequential decisions to outmaneuver stronger forces.</p>
+<p>The central experience is anticipation: <strong>“Can I arrange my commands so my fleet arrives when it matters?”</strong> Military strength should matter, but timing, position, and objective selection should offer alternatives to simply building the largest fleet.</p>
+<h3>Confirmed direction</h3>
+<ul>
+<li>An original game inspired by Forbidden Stars' mechanics.</li>
+<li><strong>Ancient humans broke a universe without magic, introducing magic alongside advanced technology.</strong> Their precursor civilization is long gone; alien factions and strange human offshoots or remnants inhabit its aftermath. The exact catastrophe and faction identities remain open.</li>
+<li><strong>Tactics tokens placed simultaneously define what each player intends to do.</strong> All players plan during the same phase; private commitment and shared reveal are selected experiment details (P-002).</li>
+<li><strong>The map consists of square tiles, each containing four quadrants in a 2×2 arrangement. Each quadrant represents a planet or a space area.</strong> Movement targets an adjacent tile, with ships moving freely to space areas and ground units requiring an unbroken friendly support path (D-024).</li>
+<li><strong>Ground units and structures are built on planets; spaceships are built in space areas.</strong> A production structure is required to produce either unit category; P-011 selects initial reach and test costs.</li>
+<li><strong>Every fight resolves as a card battle, on planets or in space. Each player has one combat deck for all battle types.</strong></li>
+<li><strong>Units have three stats: attack, health, and leadership.</strong> Attack sets battle dice, health sets damage before death, and leadership decides victory if both sides survive.</li>
+<li><strong>Battles use three rounds, with one card and dice per player each round.</strong> Dice add attack, defense, or leadership; cards add damage, defense, or leadership and may have unit-dependent effects.</li>
+<li><strong>Check damage and deaths every round.</strong> Damage clears each battle round; routed survivors remain routed until strategic refresh. Accumulated leadership is compared after final damage, adding surviving unrouted unit leadership once under selected P-009.</li>
+<li><strong>Four starting factions, each with three ground unit types and two space unit types.</strong> Their advancement requirements are defined below.</li>
+<li><strong>Match victory comes from collecting relics, represented by objective tokens on starting planets.</strong> Each player places two per enemy, at most one per planet and at least two per tile; conquering a token’s planet collects it and two collected relics win a two-player game; three win larger matches. P-012 specifies initial placement details.</li>
+<li>Single-player against AI first; online multiplayer later.</li>
+<li><strong>Develop directly in Godot using GDScript (D-025).</strong> The current implementation pins Godot 4.7.2 standard edition. Preserve the browser version as a legacy reference.</li>
+</ul>
+<h3>Proposed product targets</h3>
+<ul>
+<li>Desktop-first, mouse and keyboard, with a readable 2D strategic map.</li>
+<li>Initial complete release slice: one human against one AI.</li>
+<li>Target match duration: 30–45 minutes, subject to playtesting.</li>
+<li>Self-contained skirmishes before a campaign or persistent progression.</li>
+<li>Original setting, factions, terminology, illustrations, and rules text.</li>
+</ul>
+<h2 id="section-2">2. Inspiration and design pillars</h2>
+<p>Forbidden Stars combines hidden orders placed in shared system stacks, alternating execution of exposed orders, faction asymmetry, objective capture, dice-and-card combat, and movement barriers that change between rounds. The shared stacks are particularly important: another player's order can cover yours and affect when it becomes available. These are distinct from a single private reversed command queue. See the <a href="https://images-cdn.fantasyflightgames.com/filer_public/cf/97/cf971a24-1828-4671-a794-83f394380da5/fs01_learn_to_play_lowrez.pdf">official Learn to Play booklet</a>.</p>
+<p>Legacy of Terra should explore the strategic tensions behind those systems while developing its own rules:</p>
+<table>
+<thead>
+<tr>
+<th>Pillar</th>
+<th>Intended player experience</th>
+<th>Design consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Commit, then adapt</td>
+<td>Predict the opponent, but recover from surprises</td>
+<td>Simultaneously placed tactics tokens commit an action and location; execution can retain limited choices</td>
+</tr>
+<tr>
+<td>Position creates opportunity</td>
+<td>A smaller force can threaten a valuable objective</td>
+<td>Multiple routes, contested relic planets, and understandable travel constraints</td>
+</tr>
+<tr>
+<td>Battles involve decisions</td>
+<td>Combat is more than comparing army sizes</td>
+<td>Use the confirmed dice-and-card battle framework; test its pacing before expanding unit types</td>
+</tr>
+<tr>
+<td>Factions reward different plans</td>
+<td>Each faction changes how players approach the same map</td>
+<td>Small, explicit asymmetries rather than numerous exceptions</td>
+</tr>
+<tr>
+<td>Information is legible</td>
+<td>Understand why a plan succeeded or failed</td>
+<td>Show timing, costs, legality, outcomes, and command history clearly</td>
+</tr>
+</tbody>
+</table>
+<h2 id="section-3">3. Setting and presentation</h2>
+<h3>Confirmed lore</h3>
+<ul>
+<li><strong>Before magic:</strong> the universe originally had no magic. Humans became an incredibly advanced civilization.</li>
+<li><strong>The break:</strong> humans did something that broke the universe, introducing magic. What they did and how it worked remain unspecified.</li>
+<li><strong>The present:</strong> the ancient human civilization is long gone. Magic and highly advanced technology now coexist. The user's Warhammer 40,000 comparison establishes this blend; Legacy of Terra keeps its own setting, factions, and history.</li>
+<li><strong>The factions:</strong> present-day factions include aliens and may also be strange offshoots or remnants of humanity. The vanished precursor civilization does not imply that every human-derived being is extinct.</li>
+<li><strong>The contest:</strong> players collect relics in each match. Relics are the existing objective tokens: conquer their planets to collect them, and collect two to win with two players, otherwise three (D-018/D-019/D-022/D-023).</li>
+</ul>
+<p>These are confirmed requirements D-020–D-022. “Human player” in implementation notes still means a person controlling the game, regardless of their faction.</p>
+<h3>Open lore and proposed presentation</h3>
+<p>The exact human act, dates, why the precursor civilization disappeared, and whether the break directly caused that disappearance remain open. So do individual faction histories, the nature of magic, and the appearance or function of each relic. These details need not be completed before the map and rules prototype.</p>
+<p>The earlier fractured relay network can remain a proposed remnant of human infrastructure; it is not the confirmed cause of the cosmic break. Magical and technological motifs can inform unit, card, and structure designs. No mana resource, spell subsystem, fourth unit stat, or relic power is implied by the lore. Any mechanical effect must be specified through the existing rules and content boundaries.</p>
+<h3>Provisional factions</h3>
+<p>The starting roster will contain <strong>four factions</strong>. Two currently have provisional names; the other two remain unnamed. This roster size does not imply four players in each match.</p>
+<ul>
+<li><strong>Ember Union:</strong> industrial communities seeking to restore ancient infrastructure. Proposed identity: efficient recovery and reinforcement.</li>
+<li><strong>Vesper Accord:</strong> custodians wary of uncontrolled use of precursor technology. Proposed identity: route control and precise redeployment.</li>
+</ul>
+<p>These faction descriptions are proposals; they do not establish human ancestry or explain humanity’s disappearance. The existing prototype uses these names and colors, but both factions currently follow identical rules. Mechanical asymmetry is future work.</p>
+<p>Visual direction: dark star charts, warm amber and muted violet faction accents, geometric fleet symbols, and distinct relic markers. Ownership must also use symbols or labels, not color alone. Sound should emphasize command confirmation, route activity, and readable battle outcomes without slowing play.</p>
+<h2 id="section-4">4. Implementation status</h2>
+<h3>Active Godot movement lab</h3>
+<p>The Godot project implements a small map/movement slice: two square tiles with four
+areas each, stable IDs, separate range/support graphs, unit instances and stats,
+legal destination previews, ground transport paths, and unopposed movement. Starting,
+intact-transport, and broken-transport scenarios use the fixtures in <code>MAP_DESIGN.md</code>.
+Both player selectors use the same legality checks. Keyboard navigation and visible
+focus are available.</p>
+<p>This is a development lab, not a complete match. It displays starting relics and
+stores structure fixtures, but does not execute combat, relic collection, structure
+capture, production, tactics turns, or AI decisions. Routes requiring these systems
+can be previewed. Headless rule/scene checks and graphical smoke captures verify
+the current slice; they do not establish game balance.</p>
+<h3>Preserved browser baseline</h3>
+<p>This section describes the implemented rules, not the full intended game. The eight-world graph is a temporary map and does not yet implement the confirmed square tiles and four quadrants per tile.</p>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Current behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Map</td>
+<td>Eight fixed worlds connected by travel links; four are scoring relays</td>
+</tr>
+<tr>
+<td>Factions</td>
+<td>One human Ember Union and one Vesper Accord AI</td>
+</tr>
+<tr>
+<td>Starting position</td>
+<td>Each faction owns one home world with five ships and five alloy</td>
+</tr>
+<tr>
+<td>Planning</td>
+<td>Each faction queues three commands in a private stack</td>
+</tr>
+<tr>
+<td>Resolution</td>
+<td>Last queued command resolves first; factions alternate actions</td>
+</tr>
+<tr>
+<td>Initiative</td>
+<td>Opening faction alternates each cycle</td>
+</tr>
+<tr>
+<td>Dispatch</td>
+<td>Move a positive whole number of ships to an adjacent world</td>
+</tr>
+<tr>
+<td>Build</td>
+<td>Spend two alloy for two ships at an owned world</td>
+</tr>
+<tr>
+<td>Extract</td>
+<td>Gain three alloy at an owned world</td>
+</tr>
+<tr>
+<td>Combat</td>
+<td>Both sides lose equal numbers of ships; surviving attackers capture the world</td>
+</tr>
+<tr>
+<td>Combat tie</td>
+<td>The contested world becomes neutral with no ships</td>
+</tr>
+<tr>
+<td>Friendly movement</td>
+<td>Arriving ships join the existing fleet</td>
+</tr>
+<tr>
+<td>Empty holdings</td>
+<td>A world remains owned when its fleet leaves</td>
+</tr>
+<tr>
+<td>Cycle income</td>
+<td>Each faction gains two alloy</td>
+</tr>
+<tr>
+<td>Scoring</td>
+<td>Each owned relay produces one influence at cycle end</td>
+</tr>
+<tr>
+<td>End conditions</td>
+<td>Elimination, either side reaching 12 influence, or completion of cycle eight</td>
+</tr>
+<tr>
+<td>Winner</td>
+<td>Elimination takes priority; otherwise highest influence wins, equal influence draws</td>
+</tr>
+</tbody>
+</table>
+<p>Elimination and scoring are evaluated at the end of a cycle. A home world has no special defeat condition beyond ownership and eventual elimination.</p>
+<p>Commands are validated both when queued and when executed. A command that becomes invalid is consumed without effect. Costs and ships are not reserved during planning, so individually legal commands can conflict with each other. The human interface currently requires orders to target currently owned origins; it cannot plan an action from a world that will only be captured later in the cycle.</p>
+<p>The AI uses a private projected state to assemble its plan, prioritizing attainable captures and relays before building or extracting. This allows it to plan follow-up actions from newly captured worlds, which the human interface cannot yet express. This planning mismatch makes it unsuitable for new-rule balance evaluation; the Godot implementation must provide equal planning privileges.</p>
+<p>The prototype does not yet implement simultaneous tactics-token placement; its private command queues are an interim model. It has no tactical cards, unit classes, route disturbances, faction powers, research, save/load, or networking. Combat is a temporary numerical model.</p>
+<h2 id="section-5">5. Proposed core loop</h2>
+<ol>
+<li><strong>Assess:</strong> inspect territory, objectives, resources, and visible route conditions.</li>
+<li><strong>Plan simultaneously:</strong> all players place a limited set of tactics tokens to define actions and their locations, checking expected execution order.</li>
+<li><strong>Commit and reveal:</strong> lock each plan; reveal the tokens only after every player has committed.</li>
+<li><strong>Resolve:</strong> execute tokens in the agreed order; choose permitted execution details and resolve battles.</li>
+<li><strong>Refresh:</strong> if no conquest has already ended the match, collect income, clear routing, and rotate initiative under the selected rules.</li>
+<li><strong>Continue:</strong> start another planning phase. Relic collection and victory are checked immediately on conquest, not postponed until refresh.</li>
+</ol>
+<p>The planning interface should distinguish an impossible command from a conditional one. For example, building before moving may create enough ships for a dispatch that was impossible at the beginning of planning. Conditional plans need a clear warning and a predictable failure rule.</p>
+<h3>Tactics tokens and simultaneous placement</h3>
+<p><strong>Confirmed concept:</strong> tactics tokens represent planned actions. Players place them simultaneously during a shared planning phase to define what they will do. Placement does not execute the action immediately. “Simultaneous” means everyone plans in the same phase without taking placement turns; it does not require clicking at the same instant. Resolution timing is a separate rule.</p>
+<p>The following P-001–P-004 details are selected for the next prototype and remain revisable:</p>
+<ul>
+<li>Each faction receives three tactics tokens per cycle. For the first experiment, a token records an action type and its origin quadrant. Whole-tile targeting remains a possible later alternative.</li>
+<li>Initial action types are <strong>Dispatch</strong> (move forces), <strong>Build</strong> (produce ground units/structures on planets or ships in space), and <strong>Extract</strong> (gain alloy). Use the selected production and movement rules in <code>RULES.md</code>. Token counts and the available mix remain tunable.</li>
+<li>Each player places and edits tokens on a private planning view of the map. Opponents cannot see token types, locations, or sequence before commitment. Existing public board information remains visible.</li>
+<li>A player commits when ready, locking their tokens. Once all players have committed, all placements and action types are revealed together. Committing earlier grants no priority advantage.</li>
+<li>The AI plans from the same public starting state without access to the human's hidden tokens and commits before their reveal.</li>
+<li>For the first experiment, assign tokens to explicit slots 1–3 and alternate resolution by slot using rotating initiative (first both slot-1 tokens, then slot 2, then slot 3). Resolve each token once and remove it; an invalid action consumes its token with a clear explanation.</li>
+<li>For the selected planning experiment, commit action type, origin quadrant, and all action parameters during planning; use the unit IDs, destination, and purchase parameters defined in <code>RULES.md</code>. Compare this with execution-time choices in later playtests; full commitment is a selected experiment, not a permanent confirmed requirement.</li>
+</ul>
+<p>For example, in the same planning phase, Ember places Build at a home planet and Dispatch at a frontier area while Vesper places Extract and Dispatch at its own holdings. Neither side sees the other's placements until both commit. The revealed tokens then determine which actions each faction may perform.</p>
+<p>These strategic planning tokens are separate from the combat cards in section 7. The browser's queued commands are a precursor to this system, not a completed implementation of simultaneous token placement.</p>
+<h3>Token ordering experiment</h3>
+<p>Simultaneous tactics-token placement is the intended direction. The remaining experiment concerns how committed tokens are ordered: a private sequence per faction or shared stacks at map locations.</p>
+<p><strong>Current prototype model:</strong> one private command stack per faction, with the last queued command executing first. This provides a reference for timing but needs a tactics-token placement interface and commitment/reveal flow.</p>
+<p><strong>Possible shared-stack variant:</strong> players still place their tactics tokens simultaneously and privately. After everyone commits, assemble shared stacks at sectors using an explicit, deterministic priority rule. Placement speed or network arrival time must never determine stack order. The exact rule for combining opposing tokens at the same sector must be designed and shown in the planning interface before this variant is implemented.</p>
+<p>On an execution turn in that variant, choose one of your exposed tokens. If none are exposed, pass; remove each resolved or deliberately discarded token. Continue until all stacks are empty. Test whether interference and flexibility justify the extra rules before expanding content.</p>
+<p>The confirmed map structure is square tiles with four planet-or-space quadrants each. A sector could correspond to one tile for a shared-stack variant, but token reach and the rule for combining opposing stacks still need design. See <a href="MAP_DESIGN.md">the map specification</a>.</p>
+<h2 id="section-6">6. Territory, economy, and victory</h2>
+<h3>Square tiles and quadrants</h3>
+<p><strong>Confirmed:</strong> the map is made of squares, each divided into four quadrants in a 2×2 arrangement. Every quadrant contains a planet or a space area. A tile is the larger square; each quadrant is an individual playable area. No fixed planet-to-space ratio or map size has been chosen.</p>
+<p>D-024 establishes adjacent-tile movement, with access to every domain-eligible destination area in that tile. Ships need no supporting chain; ground units require friendly planets and ships along a continuous path. P-010 defines side-sharing tile neighbors and a separate area-edge support graph. Area-edge movement range from the earlier prototype is superseded. Same-tile Dispatch is excluded from this experiment under the user's “adjacent squares always” rule.</p>
+<p>The board must distinguish tiles, individual areas, ownership, units, and relics. See <a href="MAP_DESIGN.md">MAP_DESIGN.md</a> for the two graphs and <a href="RULES.md">RULES.md</a> for legality. Presentation highlights rule-legal destinations, including space areas that do not touch the origin area.</p>
+<h3>Structures</h3>
+<p><strong>Confirmed roles:</strong> one structure improves defensive capabilities; one is required to produce ground units or spaceships; a third grants access to higher-level units. Keep the catalogue small: <strong>3–4 structure types</strong>, interpreting the user's requested limit as types rather than a per-planet or per-player building cap. A fourth type is optional and its role remains open. The labels below describe roles, not final names.</p>
+<table>
+<thead>
+<tr>
+<th>Structure role</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Defense</td>
+<td>Adds defensive capabilities, with its effects resolved through the shared card-battle system</td>
+</tr>
+<tr>
+<td>Production</td>
+<td>Required for producing ground units on planets and spaceships in space areas</td>
+</tr>
+<tr>
+<td>Advanced-unit access</td>
+<td>Unlocks higher-level units; their production still requires the production structure</td>
+</tr>
+<tr>
+<td>Optional fourth</td>
+<td>No role selected; keep within the 3–4-type scope</td>
+</tr>
+</tbody>
+</table>
+<p>All structures are built on planets. A planet-based production structure must therefore enable ship construction in an eligible space area; P-011 selects any legal space destination in the same tile. Do not move ship construction onto planets or introduce an extra space-based structure by implication.</p>
+<p>P-011 selects test costs, defense behavior, one purchase per Build, one building per type per planet, and construction-history advancement. These choices are revisable and are specified in <code>RULES.md</code>. No structure system is implemented yet.</p>
+<h3>Unit stats</h3>
+<p><strong>Confirmed (D-011):</strong> ground and space units have exactly three stats.</p>
+<table>
+<thead>
+<tr>
+<th>Stat</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Attack</td>
+<td>Number of dice the unit rolls in battle</td>
+</tr>
+<tr>
+<td>Health</td>
+<td>Amount of damage the unit takes before dying</td>
+</tr>
+<tr>
+<td>Leadership</td>
+<td>Determines the winner when both sides have living units at battle end: higher leadership wins</td>
+</tr>
+</tbody>
+</table>
+<p>P-009/P-011 select original test stats and routing semantics. The Godot lab stores
+and displays test unit stats; battle dice, damage resolution, and final leadership
+accounting remain unimplemented. Use <code>RULES.md</code> for those semantics. Final faction
+balance remains open.</p>
+<h3>Unit roster and advancement</h3>
+<p><strong>Confirmed:</strong> each of the four starting factions has <strong>three ground unit types</strong> (tiers 1–3) and <strong>two space unit types</strong> (tiers 1–2). This gives five types per faction and twenty faction-specific roster entries overall; names, battlefield roles, stat values, and differences between factions remain open.</p>
+<table>
+<thead>
+<tr>
+<th>Unit type in each faction</th>
+<th>Advancement structures required to have been built</th>
+<th>Production location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ground tier 1</td>
+<td>0 — accessible from the start</td>
+<td>Planet</td>
+</tr>
+<tr>
+<td>Ground tier 2</td>
+<td>1</td>
+<td>Planet</td>
+</tr>
+<tr>
+<td>Ground tier 3</td>
+<td>2</td>
+<td>Planet</td>
+</tr>
+<tr>
+<td>Space tier 1</td>
+<td>0 — accessible from the start</td>
+<td>Space area</td>
+</tr>
+<tr>
+<td>Space tier 2</td>
+<td>2</td>
+<td>Space area</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>advancement structure</strong> is the existing advanced-unit-access structure, not an additional structure type. Two advancement structures means two instances of that type. These are unlock thresholds, not structures spent when producing a unit. All unit tiers still require production capability and payment of their eventual costs. Starting access to tier 1 means no advancement prerequisite; it does not give free units or waive the production structure.</p>
+<p>The requirement concerns structures the player has built. P-011 counts distinct qualifying construction sites, preserves earned credit after loss, and gives no credit for capture or rebuilding the same site. The reference game’s current-city count is not substituted for this requirement.</p>
+<h3>Economy and objective-token victory</h3>
+<p>P-011 selects alloy as the sole spendable resource for this experiment. Influence scoring belongs to the legacy browser baseline.</p>
+<p><strong>Confirmed (D-018/D-022):</strong> overall victory is based on collecting relics, represented by objective tokens. During setup, each player places <strong>two tokens for every enemy player</strong> on their own starting planets, with <strong>at most one token per planet</strong> and <strong>at least two tokens per tile</strong>. Objective tokens are distinct from tactics tokens.</p>
+<p>With all other players as enemies, each player places two/four/six tokens in a two/three/four-player match, requiring at least two/four/six eligible starting planets respectively.</p>
+<p><strong>Confirmed collection and victory (D-019/D-023):</strong> conquer a relic planet to collect its token. Two relics win with two players; three win larger matches. Check victory immediately after collection. Relic tokens are not map tiles.</p>
+<p>P-012 selects generic enemy relics, permanent collection, no scoring of one's own relics, and the two-token minimum per placing player on each token-bearing tile. These are explicit experiment interpretations, not Forbidden Stars setup rules. No cycle-limit or separate elimination victory is added. The two-player setup conflict is resolved by D-023.</p>
+<p>Route disturbances are a later experiment: announce a link closure one cycle before it occurs, limit closures to preserve meaningful access, and show the next change directly on the map. Their purpose is to shift strategic opportunities while allowing preparation. Exact frequency and connectivity safeguards remain undecided.</p>
+<h2 id="section-7">7. Combat direction</h2>
+<h3>Confirmed foundation and selected adaptation</h3>
+<p>All fighting uses a shared card-battle framework and one deck per player. Battles have three rounds, with fresh dice and one card per player each round. Unit attack determines dice; dice add attack, defense, or leadership; cards add damage, defense, leadership, and unit-dependent special effects. Damage and deaths are checked each round. Leadership accumulates and is compared after final damage, with the attacker winning ties. Cards resolve attacker-first.</p>
+<p>At the user's request, the remaining details were resolved into <strong>selected experiment P-009</strong>, using official Forbidden Stars references while retaining these differences. <a href="RULES.md">RULES.md</a> owns the complete sequence, source links, test content, leadership formula, and worked example. P-010/P-011/P-012 cover movement, production, and relic setup. These are implementation-ready defaults for the experiment, not claims of final balance or runtime implementation.</p>
+<p>Present the round's rolls, card effects, incoming damage, routing, banked leadership, and eligible unit leadership separately. Explain why a prerequisite failed or a retreat path is blocked. The worked fixture specifically checks a defender routed in round three before an attacker-winning leadership tie.</p>
+<h3>Playtest focus</h3>
+<p>Measure battle duration, usefulness of card choices, first-attacker advantage, transport bottlenecks, and understanding of routing versus round-local damage. Test both combat domains, successive battles using the same deck, and identical information limits for human and AI controllers. Final card content, faction asymmetry, and large-map balance can follow the verified fixture.</p>
+<h2 id="section-8">8. AI design</h2>
+<p>The AI should pursue victory objectives, defend threatened holdings, manage its economy, and form command sequences that remain useful under plausible enemy responses.</p>
+<ul>
+<li>Apply the same command rules and information limits to both sides.</li>
+<li>Supply AI decisions through the same validated command interface as human decisions.</li>
+<li>Score candidate plans using objective progress, territorial risk, resource efficiency, and execution reliability.</li>
+<li>Start with bounded heuristic search; keep planning time short enough for interactive play.</li>
+<li>Introduce difficulty through search quality and risk tolerance before resource bonuses.</li>
+<li>Record decision explanations for development; show players only information they are entitled to know.</li>
+</ul>
+<p>Scenario checks should cover defending a threatened relic planet, avoiding an unwinnable attack, spending resources productively, and recovering from a failed command.</p>
+<h2 id="section-9">9. User experience</h2>
+<p>The main screen should prioritize the map, objectives, current phase, faction resources, and the player's command plan. Selection details and an expandable event log support those elements.</p>
+<p>Essential feedback:</p>
+<ul>
+<li>Highlight legal origins and destinations for the selected command.</li>
+<li>Display execution order explicitly, including the meaning of stack position.</li>
+<li>Preview costs and combat results where rules allow certainty.</li>
+<li>Label conditional orders and explain failed commands with the actual reason.</li>
+<li>Provide a tactics-token tray and show each placed token’s action, location, and expected execution order.</li>
+<li>Allow token editing and undo before commitment; lock the plan after commitment. Show which players are ready without exposing their placements, then reveal all plans together.</li>
+<li>Offer manual stepping and faster automatic resolution.</li>
+<li>Explain victory progress and why the match ended.</li>
+</ul>
+<p>The first tutorial for the new experiment should teach quadrant movement, planet/space production, simultaneous tactics-token placement, commitment/reveal, numbered execution slots, and objective-token collection through a short playable scenario using the selected relic rules. Reversed execution belongs to the current browser baseline. Save/resume and a restart confirmation are needed for longer matches. Keyboard navigation, readable text scaling, and symbols supplementing faction colors are usability targets.</p>
+<h2 id="section-10">10. Technical direction</h2>
+<p>Develop directly in <strong>Godot with typed GDScript</strong>, as selected in D-025. The project
+pins <strong>Godot 4.7.2 standard edition</strong> and uses Compatibility rendering. The browser
+build remains a playable historical reference; new rules are implemented and tested
+in <code>godot/</code>.</p>
+<p>Maintain separate responsibilities:</p>
+<ul>
+<li><strong>Rules:</strong> authoritative state, legal actions, combat, scoring, and phase transitions.</li>
+<li><strong>Controllers:</strong> human input, AI plans, and later remote commands.</li>
+<li><strong>Presentation:</strong> map rendering, animation, audio, and UI.</li>
+<li><strong>Content:</strong> map definitions, faction data, units, and balance values.</li>
+</ul>
+<p>The JavaScript engine records an older experiment, not the current gameplay contract.
+Implement <code>RULES.md</code> in scene-independent GDScript using reproducible state/action
+fixtures. Rules own validation and transitions; presentation consumes legal choices
+and structured outcomes. The movement lab establishes these boundaries without
+introducing a networking layer or third-party framework.</p>
+<p>Represent matches as serializable data with stable entity IDs, a rules version, phase, initiative, resources, objectives, tactics-token placements, commitment status, resolution order, and an ordered event history. Dice battles require authoritative seeded randomness and recorded roll outcomes; persist deck order, hands, battle choices, and the paused strategic resolution cursor when implementing them. Save files should include enough state to resume a match exactly.</p>
+<h3>Later online multiplayer</h3>
+<p><strong>Proposed initial online scope:</strong> two human players in a private match; player count remains open. A server owns the authoritative state, validates each player's commands, and sends each client only permitted information. Before the shared reveal, hidden token placements must never be included in the opponent's client state. Begin resolution only after all plans are committed; network arrival order must not affect priority.</p>
+<p>Reconnection, duplicate command handling, match persistence, surrender, disconnect policy, and version compatibility are required design work. Competitive matchmaking, ranked ladders, spectators, and asynchronous correspondence play are outside the initial online milestone.</p>
+<p>Keeping the rules separate now reduces future work, but the current prototype is not network-ready.</p>
+<h2 id="section-11">11. Milestones and acceptance criteria</h2>
+<table>
+<thead>
+<tr>
+<th>Milestone</th>
+<th>Deliverable</th>
+<th>Exit criteria</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A — Baseline prototype</td>
+<td>Existing browser skirmish, preserved with a known planning limitation</td>
+<td>Baseline rules documented and tested; retained as historical reference, not a new-rule balance test</td>
+</tr>
+<tr>
+<td>B — Godot rules and tactics loop</td>
+<td>Map/movement lab delivered; combat, economy, relics, and planning next</td>
+<td>Selected fixtures pass; human and AI have equal legal choices and private commitment; reveal waits for everyone; resolution is independent of placement speed; a match reaches relic victory</td>
+</tr>
+<tr>
+<td>C — Strategic identity</td>
+<td>Tested victory model, shared dice-and-card combat for ground and space, four faction rosters with three ground and two space types each, and advancement thresholds</td>
+<td>All four factions have viable plans; battles and objectives reward more than fleet accumulation</td>
+</tr>
+<tr>
+<td>D — Polished vertical slice</td>
+<td>One Godot human-versus-AI skirmish with tutorial and save/resume</td>
+<td>Full match resumes correctly; rule fixtures pass; essential UI is usable</td>
+</tr>
+<tr>
+<td>E — Solo refinement</td>
+<td>Better AI, balance, accessibility, and feedback</td>
+<td>Repeated playtests meet agreed match-length and usability targets</td>
+</tr>
+<tr>
+<td>F — Online foundation</td>
+<td>Private two-player matches</td>
+<td>Server validation, hidden information, persistence, and reconnection work correctly</td>
+</tr>
+</tbody>
+</table>
+<p>These are product milestones, not an independent implementation order. Follow
+<code>ROADMAP.md</code>: the movement lab is delivered; combat/retreat fixtures come next,
+then production/conquest/relic rules, then the full tactics cycle.</p>
+<p>No calendar estimates are assigned yet. Resolve the major rule experiments before estimating content production.</p>
+<h2 id="section-12">12. Playtesting and open decisions</h2>
+<p>Track match duration, first-player advantage, time to first conflict, failed orders and their causes, score swings, repeatable dominant openings, and whether players can explain why they lost. Compare outcomes across both starting sides and multiple AI policies.</p>
+<p>The previous outcome-changing questions now have selected experiment answers in <code>RULES.md</code> and dispositions in <code>DECISIONS.md</code>. Test those choices before adding systems. Still open are final balance, faction identities, and production map size. Godot/GDScript is selected and the engine version is pinned. Shared token stacks and execution-time strategic choices remain later comparisons, not blockers for the private-slot prototype.</p>
+<h2 id="section-13">References and implementation</h2>
+<ul>
+<li>
+<p><a href="README.md">Documentation index and setup</a></p>
+</li>
+<li>
+<p><a href="DECISIONS.md">Decision status and open questions</a></p>
+</li>
+<li>
+<p><a href="RULES.md">Current rules and selected battle semantics</a></p>
+</li>
+<li>
+<p><a href="RULES_LEGACY.md">Historical v0.1 worked round</a></p>
+</li>
+<li>
+<p><a href="MAP_DESIGN.md">Square tile and quadrant specification</a></p>
+</li>
+<li>
+<p><a href="ROADMAP.md">Ordered implementation roadmap</a></p>
+</li>
+<li>
+<p><a href="ARCHITECTURE.md">Architecture notes</a></p>
+</li>
+<li>
+<p><a href="PLAYTEST.md">Playtest scenarios and session template</a></p>
+</li>
+<li>
+<p><a href="AGENTS.md">Contributor instructions</a></p>
+</li>
+<li>
+<p><a href="https://images-cdn.fantasyflightgames.com/filer_public/cf/97/cf971a24-1828-4671-a794-83f394380da5/fs01_learn_to_play_lowrez.pdf">Forbidden Stars — official Learn to Play</a>: reference for the inspiration summary; not Legacy of Terra's rulebook.</p>
+</li>
+<li>
+<p><a href="README.md">Prototype instructions</a></p>
+</li>
+<li>
+<p><a href="godot/project.godot">Godot project</a></p>
+</li>
+<li>
+<p><a href="godot/rules/movement.gd">Godot movement rules</a></p>
+</li>
+<li>
+<p><a href="godot/tests/run.gd">Godot rule and scene checks</a></p>
+</li>
+<li>
+<p><a href="engine.js">Legacy browser rules</a></p>
+</li>
+<li>
+<p><a href="engine.test.js">Legacy browser checks</a></p>
+</li>
+</ul>
+</main></div></body></html>
